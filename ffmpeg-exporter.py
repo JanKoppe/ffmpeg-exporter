@@ -4,7 +4,7 @@ from file_read_backwards import FileReadBackwards
 import logging
 from pathlib import Path
 from prometheus_client.core import GaugeMetricFamily, CounterMetricFamily, REGISTRY
-from prometheus_client import start_http_server 
+from prometheus_client import start_http_server
 import signal
 import sys
 import os
@@ -14,6 +14,21 @@ l = logging.getLogger(__name__)
 lh = logging.StreamHandler(sys.stdout)
 lh.setFormatter(logging.Formatter("[%(levelname)s]: %(message)s"))
 l.addHandler(lh)
+
+
+def removesuffix(string, suffix):
+    # Python < 3.9 does not have the str.removesuffix method
+    if len(suffix) > 0 and string.endswith(suffix):
+        return string[:-len(suffix)]
+    return string
+
+
+def removeprefix(string, prefix):
+    # Python < 3.9 does not have the str.removeprefix method
+    if len(prefix) > 0 and string.startswith(prefix):
+        return string[len(prefix):]
+    return string
+
 
 class FfmpegCollector(object):
   def __init__(self, watch_path):
@@ -71,11 +86,11 @@ class FfmpegCollector(object):
               c_dup.add_metric([identifier], float(value))
             if key.startswith('stream') and key.endswith('q'):
               # example: stream_0_0_q=22.0
-              output, stream = filter(None, key.removesuffix('q').removeprefix('stream').split('_'))
+              output, stream = filter(None, removeprefix(removesuffix(key, 'q'), 'stream').split('_'))
               g_q.add_metric([identifier, output, stream], float(value))
             if key == 'speed':
-              g_speed.add_metric([identifier], float(value.removesuffix('x')))
-  
+              g_speed.add_metric([identifier], float(removesuffix(value, 'x')))
+
           except ValueError:
             l.debug(f"key '{key}' contained value '{value}' which was not castable to float. ignoring.")
 
